@@ -32,10 +32,16 @@ def frame_generator(video_path, target_width=640, target_height=480):
         ret, frame = cap.read()
         if not ret:
             break
-        # 调整帧的大小
         frame = cv2.resize(frame, (target_width, target_height))
         yield int(cap.get(cv2.CAP_PROP_POS_FRAMES)), frame
     cap.release()
+
+def estimate_remaining_time(start_time, processed_frames, total_frames, fps):
+    elapsed_time = time.time() - start_time
+    avg_time_per_frame = elapsed_time / processed_frames if processed_frames > 0 else 0
+    remaining_frames = total_frames - processed_frames
+    remaining_time = remaining_frames * avg_time_per_frame
+    return remaining_time
 
 def detect_cat_in_video(video_path, model, transform, num_threads=4, threshold=0.8):
     cap = cv2.VideoCapture(video_path)
@@ -45,6 +51,7 @@ def detect_cat_in_video(video_path, model, transform, num_threads=4, threshold=0
     lock = Lock()
     processed_frames = 0
     progress_lock = Lock()
+    start_time = time.time()
 
     def worker(frame_queue):
         nonlocal processed_frames
@@ -60,34 +67,30 @@ def detect_cat_in_video(video_path, model, transform, num_threads=4, threshold=0
             except Queue.Empty:
                 break
 
-    start_time = time.time()  # 记录开始时间
+    frame_queue = Queue(maxsize=num_threads * 10)
 
-    frame_queue = Queue(maxsize=num_threads * 10)  # 设置队列的最大大小
-
-    # 创建和启动线程
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         for _ in range(num_threads):
             executor.submit(worker, frame_queue)
 
-        # 逐帧读取并放入队列
         for frame_num, frame in frame_generator(video_path):
             frame_queue.put((frame_num, frame))
 
-            # 显示进度
             with progress_lock:
                 current_progress = (processed_frames / total_frames) * 100
-            print(f"Processing frames: {processed_frames}/{total_frames} ({current_progress:.2f}%)", end='\r')
+                remaining_time = estimate_remaining_time(start_time, processed_frames, total_frames, fps)
+                print(f"Processing frames: {processed_frames}/{total_frames} ({current_progress:.2f}%), Estimated time remaining: {remaining_time:.2f}s", end='\r')
 
-    # 确保所有任务完成
     frame_queue.join()
 
-    # 确保最后一次更新进度
     with progress_lock:
         current_progress = (processed_frames / total_frames) * 100
-    print(f"Processing frames: {processed_frames}/{total_frames} ({current_progress:.2f}%)")
+    print(f"\nProcessing frames: {processed_frames}/{total_frames} ({current_progress:.2f}%)")
+    end_time = time.time()
+    print(f"Video analysis completed. Time taken: {end_time - start_time:.2f} seconds")
 
-    end_time = time.time()  # 记录结束时间
-    print(f"\nVideo analysis completed. Time taken: {end_time - start_time:.2f} seconds")
+    cat_percentage = (len(cat_detected_frames) / total_frames) * 100
+    print(f"Cat detected in {len(cat_detected_frames)} frames, which is {cat_percentage:.2f}% of the total video duration.")
 
     return sorted(cat_detected_frames), fps
 
@@ -95,11 +98,11 @@ def write_results_to_file(cat_detected_frames, fps, output_file='output.txt'):
     with open(output_file, 'w') as f:
         for i, frame_num in enumerate(cat_detected_frames):
             start_time = frame_num / fps
-            end_time = (frame_num + 1) / fps  # 假设猫只在这一帧出现
+            end_time = (frame_num + 1) / fps
             duration = end_time - start_time
             f.write(f"Cat detected at {start_time:.2f}s, duration: {duration:.2f}s\n")
 
 if __name__ == "__main__":
-    video_path = "C:\\Users\\1\\Videos\\movie01.mp4"
+    video_path = "data\\Media1.mp4"
     cat_frames, video_fps = detect_cat_in_video(video_path, model, transform, num_threads=4)
     write_results_to_file(cat_frames, video_fps)
