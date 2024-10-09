@@ -22,7 +22,8 @@ def process_frame(frame, model, transform, threshold=0.8):
         predictions = model(frame_tensor)
     
     for pred in range(len(predictions[0]['labels'])):
-        if predictions[0]['labels'][pred] == 17 and predictions[0]['scores'][pred] > threshold:  # COCO 数据集中 'cat' 的类别 ID 是 17
+        # if predictions[0]['labels'][pred] == 17 and predictions[0]['scores'][pred] > threshold:  # COCO 数据集中 'cat' 的类别 ID 是 17
+        if predictions[0]['labels'][pred] == 3 and predictions[0]['scores'][pred] > threshold:  # COCO 数据集中 'cat' 的类别 ID 是 17
             return True
     return False
 
