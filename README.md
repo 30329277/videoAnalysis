@@ -1,61 +1,67 @@
 # Project README
 
-## Overview
-This project aims to detect frames within a video that contain cats using a pre-trained Faster R-CNN model. It leverages the `torchvision` models provided by the PyTorch library and employs multi-threading for faster video analysis.
+## Project Overview
+This project utilizes PyTorch and a pre-trained Faster R-CNN model to detect people in video footage and analyze the time during which people are present and active. The project employs multithreading to process video frames, enhancing processing speed, and can automatically convert MTS video files to MP4 format.
 
 ## Features
-- **Cat Detection**: The program identifies frames in a video where a cat is present.
-- **Multi-Threading**: Utilizes Python's `concurrent.futures` to process video frames in parallel, improving the speed of the detection process.
-- **Progress Reporting**: Displays the progress of the video analysis, including the estimated remaining time.
-- **Output File Generation**: Writes the timestamps of detected cat appearances into an output file.
+- **Person Detection**: Uses a pre-trained Faster R-CNN model to identify people in the video.
+- **Activity Detection**: Calculates the movement of people between frames to determine if they are active.
+- **Time Statistics**: Computes the percentage of video duration where people are detected and the percentage of time where people are active.
+- **Video Format Conversion**: Automatically converts MTS video files to MP4 format.
 
-## Requirements
-- Python 3.x
+## Environment Requirements
+- Python 3.7 or higher
 - PyTorch
+- OpenCV
 - torchvision
-- OpenCV (cv2)
-- NumPy (used implicitly by other libraries)
+- numpy
+- FFmpeg (for video conversion)
 
 ## Installation
-To install the required packages, you can use pip:
+Install the required dependencies using pip:
 ```bash
-pip install torch torchvision opencv-python
+pip install torch torchvision opencv-python numpy
 ```
 
-## Code Explanation
-### Imports
-The script starts with importing necessary libraries, including PyTorch for the model, torchvision for pre-trained models and transformations, and OpenCV for handling video input.
-
-### Model Initialization
-- A pre-trained Faster R-CNN model is loaded from `torchvision.models.detection`.
-- The model is set to evaluation mode.
-
-### Frame Processing
-- A function `process_frame` is defined to handle the transformation of each frame into a tensor and then passing it through the model to get predictions.
-- The function specifically looks for predictions with a high confidence score (above a threshold) and checks if the predicted class corresponds to a cat (COCO dataset class ID 17).
-
-### Video Handling
-- `frame_generator` is a generator function that reads frames from the video, resizes them, and yields them one by one.
-- `detect_cat_in_video` is the main function that initializes the video capture, sets up threading, and processes the frames.
-- It also prints out the processing progress and estimates the remaining time.
-
-### Multi-Threading
-- A thread pool is created to distribute the frame processing across multiple threads.
-- Each thread takes frames from a queue, processes them, and updates the shared data structures in a thread-safe manner.
-
-### Output
-- After all frames have been processed, the script calculates the percentage of frames where a cat was detected.
-- The results, including the start times and durations of the detected cat appearances, are written to an output file.
+Ensure that FFmpeg is installed and `ffmpeg.exe` is available in your system's PATH, or specify the correct path to the FFmpeg executable in the code.
 
 ## Usage
-To run the script, simply execute it with Python, ensuring that the path to the video file is correctly specified. An example of running the script is as follows:
-```python
-if __name__ == "__main__":
-    video_path = "data\\Media1.mp4"
-    cat_frames, video_fps = detect_cat_in_video(video_path, model, transform, num_threads=4)
-    write_results_to_file(cat_frames, video_fps)
-```
-Make sure the video file exists at the specified location, and adjust the number of threads based on your system's capabilities.
+1. Place your video file in the `data/` directory, or modify the `video_path` variable to point to the correct video file.
+2. Run the main script:
+   ```bash
+   python your_script_name.py
+   ```
+
+### Configuration Parameters
+- `video_path`: Path to the video file.
+- `interval`: Detection interval in seconds, default is 30 seconds.
+- `target_label_id`: Target class ID, corresponding to the COCO dataset class index (e.g., 1 for "person").
+- `num_threads`: Number of threads to use for processing video frames, default is 4.
 
 ## Output
-The script will generate an `output.txt` file containing the timestamps of when a cat was detected in the video, along with the duration of each appearance. Additionally, it will print out the total number of frames analyzed, the percentage of frames with a cat, and the total time taken to complete the analysis.
+Upon completion, the program will output the following information:
+- Total video duration
+- Total time with people detected and the percentage of the total video duration
+- Total time with active people detected and the percentage of the total video duration
+- Total time taken to process the video
+
+## Notes
+- Ensure your machine has sufficient memory to handle large video files.
+- If the video is in MTS format, the program will attempt to convert it to MP4 before processing.
+- You can balance processing speed and accuracy by adjusting the `interval` parameter.
+
+## Code Structure
+- `process_frame`: Processes a single frame and returns detected person bounding boxes.
+- `frame_generator`: Generator function that reads video frames at specified intervals.
+- `format_time`: Formats time output.
+- `estimate_remaining_time`: Estimates the remaining processing time.
+- `calculate_motion`: Calculates the motion between two sets of bounding boxes.
+- `convert_to_mp4`: Converts the video format to MP4.
+- `detect_people_in_video`: Main processing function that orchestrates other helper functions and aggregates results.
+
+## Contributing
+Contributions are welcome! If you find any bugs or have suggestions for improvements, please submit an issue or a pull request.
+
+---
+
+This README provides a basic overview of the project, including how to set up the environment, run the code, and what to expect as output. Depending on your specific needs, you may want to add more details, such as more configuration options, example outputs, and additional documentation.
